@@ -84,9 +84,6 @@ s2 = Span(text, 8,12, label="ORG")
 
 text.set_ents([s1, s2], default='unmodified')
 
-# for ent in text.ents:
-    # print(ent.text, ' | ', ent.label_, ' | ', spacy.explain(ent.label_))
-# displacy.render(text, style="ent")
 
 # NEXT WORD PREDICTOR USING LSTM
 
