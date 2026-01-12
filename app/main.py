@@ -14,6 +14,9 @@ from spacy.tokens import Span
 # from gensim.models import Word2Vec, KeyedVectors
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
 
 # Bag of Words and Training the Model
 dataFrame = pd.read_csv("Data/spam.csv")
@@ -75,22 +78,12 @@ message = ["pyjama"]
 message_cnt = tf.transform(message)
 # print(clf.predict(message_cnt))
 
-nlp = spacy.load('en_core_web_sm')
-pipes = nlp.pipe_names
-text = nlp("Tesla inc is going to acquire twitter at forty five billion dollars")
-
-s1 = Span(text, 0,2, label="ORG")
-s2 = Span(text, 8,12, label="ORG")
-
-text.set_ents([s1, s2], default='unmodified')
-
-
 # NEXT WORD PREDICTOR USING LSTM
 
-sample_text = """Data is often called the new oil of the digital age, and for a good reason.
-It fuels decision-making processes, drives innovation, and helps organizations gain insights into their operations.
-However, before data can be harnessed for these purposes, it must go through a rigorous data cleaning process.
-In this article, we'll explore the essential steps and strategies involved in data cleaning from the perspective of a data analyst."""
+sample_text = """Data second-hand in these extents frequently have inferior 1% of excellent, but “entertaining” occurrences (for example fraudsters utilizing credit cards, consumer clicking poster or debased attendant thumbing through allure network). 
+However, most machine intelligence algorithms do to malfunction very well accompanying unstable datasets. 
+The following seven methods can help you, to train a classifier to discover the atypical class.
+"""
 
 # Initiate the tokenizer
 tokenizer = Tokenizer()
@@ -107,7 +100,35 @@ for sentence in sample_text.split("\n"):
 
 max_len = max([len(x) for x in input_sequences])
 padded_sequence = pad_sequences(input_sequences, maxlen = max_len, padding='pre')
-print(padded_sequence)
+
+X = padded_sequence[:,:-1]
+y = padded_sequence[:,-1]
+print(tokenizer.word_index)
+
+y = to_categorical(y, num_classes=len(tokenizer.word_index)+1)
+print(X.shape, y.shape)
+
+model = Sequential()
+model.add(Embedding(len(tokenizer.word_index)+1, 10, input_length=max_len-1))
+model.add(LSTM(100))
+model.add(Dense(len(tokenizer.word_index)+1, activation='softmax'))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+print(model.fit(X, y, epochs=100, verbose=1))
+
+def predict_next_word(model, tokenizer, text, max_sequence_len):
+    tokenized_text = tokenizer.texts_to_sequences([text])[0]
+    tokenized_text = pad_sequences([tokenized_text], maxlen=max_sequence_len-1, padding='pre')
+    predicted = model.predict(tokenized_text, verbose=0)
+    predicted_word_index = np.argmax(predicted, axis=1)[0]
+    for word, index in tokenizer.word_index.items():
+        if index == predicted_word_index:
+            return word
+    return ""
+
+seed_text = "most machine intelligence"
+next_word = predict_next_word(model, tokenizer, seed_text, max_len)
+print(f"Next word prediction for '{seed_text}: {next_word}'")
 
 
 
